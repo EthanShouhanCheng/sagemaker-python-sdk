@@ -60,6 +60,7 @@ class _RepackModelStep(TrainingStep):
         source_dir: str = None,
         dependencies: List = None,
         depends_on: List[str] = None,
+        **kwargs,
     ):
         """Constructs a TrainingStep, given an `EstimatorBase` instance.
 
@@ -98,6 +99,7 @@ class _RepackModelStep(TrainingStep):
                 "inference_script": self._entry_point_basename,
                 "model_archive": self._model_archive,
             },
+            **kwargs,
         )
         repacker.disable_profiler = True
         inputs = TrainingInput(self._model_prefix)
@@ -126,7 +128,10 @@ class _RepackModelStep(TrainingStep):
         self._source_dir = tempfile.mkdtemp()
         self.estimator.source_dir = self._source_dir
 
-        shutil.copy2(self._entry_point, os.path.join(self._source_dir, self._entry_point_basename))
+        shutil.copy2(
+            self._entry_point,
+            os.path.join(self._source_dir, self._entry_point_basename),
+        )
         self._entry_point = self._entry_point_basename
 
     def _inject_repack_script(self):
@@ -257,7 +262,9 @@ class _RegisterModelStep(Step):
                 depends on
             **kwargs: additional arguments to `create_model`.
         """
-        super(_RegisterModelStep, self).__init__(name, StepTypeEnum.REGISTER_MODEL, depends_on)
+        super(_RegisterModelStep, self).__init__(
+            name, StepTypeEnum.REGISTER_MODEL, depends_on
+        )
         self.estimator = estimator
         self.model_data = model_data
         self.content_types = content_types
@@ -294,7 +301,9 @@ class _RegisterModelStep(Step):
 
             # create the model, but custom funky framework stuff going on in some places
             if self.image_uri:
-                model = self.estimator.create_model(image_uri=self.image_uri, **self.kwargs)
+                model = self.estimator.create_model(
+                    image_uri=self.image_uri, **self.kwargs
+                )
             else:
                 model = self.estimator.create_model(**self.kwargs)
             model.model_data = self.model_data
@@ -309,8 +318,12 @@ class _RegisterModelStep(Step):
                     model._framework_name,
                     region_name,
                     version=model.framework_version,
-                    py_version=model.py_version if hasattr(model, "py_version") else None,
-                    instance_type=self.kwargs.get("instance_type", self.estimator.instance_type),
+                    py_version=model.py_version
+                    if hasattr(model, "py_version")
+                    else None,
+                    instance_type=self.kwargs.get(
+                        "instance_type", self.estimator.instance_type
+                    ),
                     accelerator_type=self.kwargs.get("accelerator_type"),
                     image_scope="inference",
                 )

@@ -27,7 +27,9 @@ from six.moves.urllib.parse import urlparse
 import sagemaker
 from sagemaker import git_utils, image_uris
 from sagemaker.analytics import TrainingJobAnalytics
-from sagemaker.debugger import TensorBoardOutputConfig  # noqa: F401 # pylint: disable=unused-import
+from sagemaker.debugger import (
+    TensorBoardOutputConfig,
+)  # noqa: F401 # pylint: disable=unused-import
 from sagemaker.debugger import (
     DebuggerHookConfig,
     FrameworkProfile,
@@ -81,7 +83,9 @@ from sagemaker import vpc_utils
 logger = logging.getLogger(__name__)
 
 
-class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-many-public-methods
+class EstimatorBase(
+    with_metaclass(ABCMeta, object)
+):  # pylint: disable=too-many-public-methods
     """Handle end-to-end Amazon SageMaker training and deployment tasks.
 
     For introduction to model training and deployment, see
@@ -290,7 +294,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             "train_use_spot_instances", "use_spot_instances", use_spot_instances, kwargs
         )
         max_wait = renamed_kwargs("train_max_wait", "max_wait", max_wait, kwargs)
-        volume_size = renamed_kwargs("train_volume_size", "volume_size", volume_size, kwargs)
+        volume_size = renamed_kwargs(
+            "train_volume_size", "volume_size", volume_size, kwargs
+        )
         volume_kms_key = renamed_kwargs(
             "train_volume_kms_key", "volume_kms_key", volume_kms_key, kwargs
         )
@@ -450,11 +456,15 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         # if output_path was specified we use it otherwise initialize here.
         # For Local Mode with local_code=True we don't need an explicit output_path
         if self.output_path is None:
-            local_code = get_config_value("local.local_code", self.sagemaker_session.config)
+            local_code = get_config_value(
+                "local.local_code", self.sagemaker_session.config
+            )
             if self.sagemaker_session.local_mode and local_code:
                 self.output_path = ""
             else:
-                self.output_path = "s3://{}/".format(self.sagemaker_session.default_bucket())
+                self.output_path = "s3://{}/".format(
+                    self.sagemaker_session.default_bucket()
+                )
 
         self._prepare_rules()
         self._prepare_debugger_for_training()
@@ -482,7 +492,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
     def _prepare_debugger_for_training(self):
         """Prepare debugger rules and debugger configs for training."""
         if self.debugger_rules and self.debugger_hook_config is None:
-            self.debugger_hook_config = DebuggerHookConfig(s3_output_path=self.output_path)
+            self.debugger_hook_config = DebuggerHookConfig(
+                s3_output_path=self.output_path
+            )
         # If debugger_hook_config was provided without an S3 URI, default it for the customer.
         if self.debugger_hook_config and not self.debugger_hook_config.s3_output_path:
             self.debugger_hook_config.s3_output_path = self.output_path
@@ -510,7 +522,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
                 self.collection_configs.update(rule.collection_configs)
         # Add the CollectionConfigs from DebuggerHookConfig to the set.
         if self.debugger_hook_config:
-            self.collection_configs.update(self.debugger_hook_config.collection_configs or [])
+            self.collection_configs.update(
+                self.debugger_hook_config.collection_configs or []
+            )
 
     def _prepare_profiler_for_training(self):
         """Set necessary values and do basic validations in profiler config and profiler rules.
@@ -522,9 +536,13 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         """
         if self.disable_profiler:
             if self.profiler_config:
-                raise RuntimeError("profiler_config cannot be set when disable_profiler is True.")
+                raise RuntimeError(
+                    "profiler_config cannot be set when disable_profiler is True."
+                )
             if self.profiler_rules:
-                raise RuntimeError("ProfilerRule cannot be set when disable_profiler is True.")
+                raise RuntimeError(
+                    "ProfilerRule cannot be set when disable_profiler is True."
+                )
         elif _region_supports_profiler(self.sagemaker_session.boto_region_name):
             if self.profiler_config is None:
                 self.profiler_config = ProfilerConfig(s3_output_path=self.output_path)
@@ -553,7 +571,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             rule (:class:`~sagemaker.debugger.RuleBase`): Any rule object that derives from RuleBase
         """
         if rule.image_uri == "DEFAULT_RULE_EVALUATOR_IMAGE":
-            rule.image_uri = get_rule_container_image_uri(self.sagemaker_session.boto_region_name)
+            rule.image_uri = get_rule_container_image_uri(
+                self.sagemaker_session.boto_region_name
+            )
             rule.instance_type = None
             rule.volume_size_in_gb = None
 
@@ -633,7 +653,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             )
         return None
 
-    def fit(self, inputs=None, wait=True, logs="All", job_name=None, experiment_config=None):
+    def fit(
+        self, inputs=None, wait=True, logs="All", job_name=None, experiment_config=None
+    ):
         """Train a model using the input training dataset.
 
         The API calls the Amazon SageMaker CreateTrainingJob API to start
@@ -676,14 +698,18 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         """
         self._prepare_for_training(job_name=job_name)
 
-        self.latest_training_job = _TrainingJob.start_new(self, inputs, experiment_config)
+        self.latest_training_job = _TrainingJob.start_new(
+            self, inputs, experiment_config
+        )
         self.jobs.append(self.latest_training_job)
         if wait:
             self.latest_training_job.wait(logs=logs)
 
     def _compilation_job_name(self):
         """Placeholder docstring"""
-        base_name = self.base_job_name or base_name_from_image(self.training_image_uri())
+        base_name = self.base_job_name or base_name_from_image(
+            self.training_image_uri()
+        )
         return name_from_base("compilation-" + base_name)
 
     def compile_model(
@@ -749,11 +775,15 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         """
         if framework and framework not in NEO_ALLOWED_FRAMEWORKS:
             raise ValueError(
-                "Please use valid framework, allowed values: {}".format(NEO_ALLOWED_FRAMEWORKS)
+                "Please use valid framework, allowed values: {}".format(
+                    NEO_ALLOWED_FRAMEWORKS
+                )
             )
 
         if (framework is None) != (framework_version is None):
-            raise ValueError("You should provide framework and framework_version at the same time.")
+            raise ValueError(
+                "You should provide framework and framework_version at the same time."
+            )
 
         model = self.create_model(**kwargs)
 
@@ -775,7 +805,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         return self._compiled_models[target_instance_family]
 
     @classmethod
-    def attach(cls, training_job_name, sagemaker_session=None, model_channel_name="model"):
+    def attach(
+        cls, training_job_name, sagemaker_session=None, model_channel_name="model"
+    ):
         """Attach to an existing training job.
 
         Create an Estimator bound to an existing training job, each subclass
@@ -818,7 +850,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         job_details = sagemaker_session.sagemaker_client.describe_training_job(
             TrainingJobName=training_job_name
         )
-        init_params = cls._prepare_init_params_from_job_description(job_details, model_channel_name)
+        init_params = cls._prepare_init_params_from_job_description(
+            job_details, model_channel_name
+        )
         tags = sagemaker_session.sagemaker_client.list_tags(
             ResourceArn=job_details["TrainingJobArn"]
         )["Tags"]
@@ -929,7 +963,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             if family not in self._compiled_models:
                 raise ValueError(
                     "No compiled model for {}. "
-                    "Please compile one with compile_model before deploying.".format(family)
+                    "Please compile one with compile_model before deploying.".format(
+                        family
+                    )
                 )
             model = self._compiled_models[family]
         else:
@@ -1007,6 +1043,7 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         if compile_model_family is not None:
             model = self._compiled_models[compile_model_family]
         else:
+            kwargs["model_kms_key"] = self.output_kms_key
             model = self.create_model(image_uri=image_uri, **kwargs)
         model.name = model_name
         return model.register(
@@ -1056,7 +1093,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         """
 
     @classmethod
-    def _prepare_init_params_from_job_description(cls, job_details, model_channel_name=None):
+    def _prepare_init_params_from_job_description(
+        cls, job_details, model_channel_name=None
+    ):
         """Convert the job description to init params that can be handled by the class constructor.
 
         Args:
@@ -1075,20 +1114,30 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
         init_params["instance_type"] = job_details["ResourceConfig"]["InstanceType"]
         init_params["volume_size"] = job_details["ResourceConfig"]["VolumeSizeInGB"]
         init_params["max_run"] = job_details["StoppingCondition"]["MaxRuntimeInSeconds"]
-        init_params["input_mode"] = job_details["AlgorithmSpecification"]["TrainingInputMode"]
+        init_params["input_mode"] = job_details["AlgorithmSpecification"][
+            "TrainingInputMode"
+        ]
         init_params["base_job_name"] = base_from_name(job_details["TrainingJobName"])
         init_params["output_path"] = job_details["OutputDataConfig"]["S3OutputPath"]
         init_params["output_kms_key"] = job_details["OutputDataConfig"]["KmsKeyId"]
         if "EnableNetworkIsolation" in job_details:
-            init_params["enable_network_isolation"] = job_details["EnableNetworkIsolation"]
+            init_params["enable_network_isolation"] = job_details[
+                "EnableNetworkIsolation"
+            ]
 
         has_hps = "HyperParameters" in job_details
-        init_params["hyperparameters"] = job_details["HyperParameters"] if has_hps else {}
+        init_params["hyperparameters"] = (
+            job_details["HyperParameters"] if has_hps else {}
+        )
 
         if "AlgorithmName" in job_details["AlgorithmSpecification"]:
-            init_params["algorithm_arn"] = job_details["AlgorithmSpecification"]["AlgorithmName"]
+            init_params["algorithm_arn"] = job_details["AlgorithmSpecification"][
+                "AlgorithmName"
+            ]
         elif "TrainingImage" in job_details["AlgorithmSpecification"]:
-            init_params["image_uri"] = job_details["AlgorithmSpecification"]["TrainingImage"]
+            init_params["image_uri"] = job_details["AlgorithmSpecification"][
+                "TrainingImage"
+            ]
         else:
             raise RuntimeError(
                 "Invalid AlgorithmSpecification. Either TrainingImage or "
@@ -1105,7 +1154,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
                 "EnableInterContainerTrafficEncryption"
             ]
 
-        subnets, security_group_ids = vpc_utils.from_dict(job_details.get(vpc_utils.VPC_CONFIG_KEY))
+        subnets, security_group_ids = vpc_utils.from_dict(
+            job_details.get(vpc_utils.VPC_CONFIG_KEY)
+        )
         if subnets:
             init_params["subnets"] = subnets
         if security_group_ids:
@@ -1115,20 +1166,26 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             for channel in job_details["InputDataConfig"]:
                 if channel["ChannelName"] == model_channel_name:
                     init_params["model_channel_name"] = model_channel_name
-                    init_params["model_uri"] = channel["DataSource"]["S3DataSource"]["S3Uri"]
+                    init_params["model_uri"] = channel["DataSource"]["S3DataSource"][
+                        "S3Uri"
+                    ]
                     break
 
         if job_details.get("EnableManagedSpotTraining", False):
             init_params["use_spot_instances"] = True
-            max_wait = job_details.get("StoppingCondition", {}).get("MaxWaitTimeInSeconds")
+            max_wait = job_details.get("StoppingCondition", {}).get(
+                "MaxWaitTimeInSeconds"
+            )
             if max_wait:
                 init_params["max_wait"] = max_wait
 
         if job_details.get("RetryStrategy", False):
-            init_params["max_retry_attempts"] = job_details.get("RetryStrategy", {}).get(
-                "MaximumRetryAttempts"
+            init_params["max_retry_attempts"] = job_details.get(
+                "RetryStrategy", {}
+            ).get("MaximumRetryAttempts")
+            max_wait = job_details.get("StoppingCondition", {}).get(
+                "MaxWaitTimeInSeconds"
             )
-            max_wait = job_details.get("StoppingCondition", {}).get("MaxWaitTimeInSeconds")
             if max_wait:
                 init_params["max_wait"] = max_wait
         return init_params
@@ -1303,9 +1360,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
                 "and the Debugger profiling rules, please use the update_profiler function."
             )
 
-        if "ProfilerConfig" in training_job_details and training_job_details["ProfilerConfig"].get(
-            "S3OutputPath"
-        ):
+        if "ProfilerConfig" in training_job_details and training_job_details[
+            "ProfilerConfig"
+        ].get("S3OutputPath"):
             self.profiler_config = ProfilerConfig(
                 s3_output_path=training_job_details["ProfilerConfig"]["S3OutputPath"]
             )
@@ -1388,7 +1445,9 @@ class EstimatorBase(with_metaclass(ABCMeta, object)):  # pylint: disable=too-man
             and not framework_profile_params
             and not disable_framework_metrics
         ):
-            raise ValueError("Please provide profiler config or profiler rule to be updated.")
+            raise ValueError(
+                "Please provide profiler config or profiler rule to be updated."
+            )
 
         if disable_framework_metrics and framework_profile_params:
             raise ValueError(
@@ -1482,7 +1541,9 @@ class _TrainingJob(_Job):
         current_hyperparameters = estimator.hyperparameters()
         if current_hyperparameters is not None:
             hyperparameters = {
-                str(k): (v if isinstance(v, (Parameter, Expression, Properties)) else str(v))
+                str(k): (
+                    v if isinstance(v, (Parameter, Expression, Properties)) else str(v)
+                )
                 for (k, v) in current_hyperparameters.items()
             }
 
@@ -1507,7 +1568,9 @@ class _TrainingJob(_Job):
             train_args["enable_network_isolation"] = True
 
         if estimator.max_retry_attempts is not None:
-            train_args["retry_strategy"] = {"MaximumRetryAttempts": estimator.max_retry_attempts}
+            train_args["retry_strategy"] = {
+                "MaximumRetryAttempts": estimator.max_retry_attempts
+            }
         else:
             train_args["retry_strategy"] = None
 
@@ -1523,8 +1586,12 @@ class _TrainingJob(_Job):
             train_args["debugger_rule_configs"] = estimator.debugger_rule_configs
 
         if estimator.debugger_hook_config:
-            estimator.debugger_hook_config.collection_configs = estimator.collection_configs
-            train_args["debugger_hook_config"] = estimator.debugger_hook_config._to_request_dict()
+            estimator.debugger_hook_config.collection_configs = (
+                estimator.collection_configs
+            )
+            train_args[
+                "debugger_hook_config"
+            ] = estimator.debugger_hook_config._to_request_dict()
 
         if estimator.tensorboard_output_config:
             train_args[
@@ -1554,12 +1621,16 @@ class _TrainingJob(_Job):
 
         if estimator.checkpoint_s3_uri:
             if local_mode:
-                raise ValueError("Setting checkpoint_s3_uri is not supported in local mode.")
+                raise ValueError(
+                    "Setting checkpoint_s3_uri is not supported in local mode."
+                )
             train_args["checkpoint_s3_uri"] = estimator.checkpoint_s3_uri
 
         if estimator.checkpoint_local_path:
             if local_mode:
-                raise ValueError("Setting checkpoint_local_path is not supported in local mode.")
+                raise ValueError(
+                    "Setting checkpoint_local_path is not supported in local mode."
+                )
             train_args["checkpoint_local_path"] = estimator.checkpoint_local_path
 
     @classmethod
@@ -1582,7 +1653,9 @@ class _TrainingJob(_Job):
             sagemaker.estimator._TrainingJob: Constructed object that captures
             all information about the updated training job.
         """
-        update_args = cls._get_update_args(estimator, profiler_rule_configs, profiler_config)
+        update_args = cls._get_update_args(
+            estimator, profiler_rule_configs, profiler_config
+        )
         estimator.sagemaker_session.update_training_job(**update_args)
 
         return estimator.latest_training_job
@@ -1639,7 +1712,9 @@ class _TrainingJob(_Job):
         """
         job_summary = self.describe()
         rule_eval_statuses = job_summary.get("DebugRuleEvaluationStatuses") or []
-        rule_eval_statuses.extend(job_summary.get("ProfilerRuleEvaluationStatuses") or [])
+        rule_eval_statuses.extend(
+            job_summary.get("ProfilerRuleEvaluationStatuses") or []
+        )
 
         return rule_eval_statuses
 
@@ -2168,7 +2243,9 @@ class Framework(EstimatorBase):
             You can find additional parameters for initializing this class at
             :class:`~sagemaker.estimator.EstimatorBase`.
         """
-        super(Framework, self).__init__(enable_network_isolation=enable_network_isolation, **kwargs)
+        super(Framework, self).__init__(
+            enable_network_isolation=enable_network_isolation, **kwargs
+        )
         image_uri = renamed_kwargs("image_name", "image_uri", image_uri, kwargs)
         if entry_point.startswith("s3://"):
             raise ValueError(
@@ -2240,7 +2317,9 @@ class Framework(EstimatorBase):
         self._hyperparameters[SCRIPT_PARAM_NAME] = script
         self._hyperparameters[CONTAINER_LOG_LEVEL_PARAM_NAME] = self.container_log_level
         self._hyperparameters[JOB_NAME_PARAM_NAME] = self._current_job_name
-        self._hyperparameters[SAGEMAKER_REGION_PARAM_NAME] = self.sagemaker_session.boto_region_name
+        self._hyperparameters[
+            SAGEMAKER_REGION_PARAM_NAME
+        ] = self.sagemaker_session.boto_region_name
 
         self._validate_and_set_debugger_configs()
 
@@ -2249,13 +2328,19 @@ class Framework(EstimatorBase):
         if self.debugger_hook_config is None and _region_supports_debugger(
             self.sagemaker_session.boto_region_name
         ):
-            self.debugger_hook_config = DebuggerHookConfig(s3_output_path=self.output_path)
+            self.debugger_hook_config = DebuggerHookConfig(
+                s3_output_path=self.output_path
+            )
         elif not self.debugger_hook_config:
             # set hook config to False if _region_supports_debugger is False
             self.debugger_hook_config = False
 
         # Disable debugger if checkpointing is enabled by the customer
-        if self.checkpoint_s3_uri and self.checkpoint_local_path and self.debugger_hook_config:
+        if (
+            self.checkpoint_s3_uri
+            and self.checkpoint_local_path
+            and self.debugger_hook_config
+        ):
             if self._framework_name in {"mxnet", "pytorch", "tensorflow"}:
                 if self.instance_count > 1 or (
                     hasattr(self, "distribution")
@@ -2284,11 +2369,15 @@ class Framework(EstimatorBase):
             kms_key = self.output_kms_key
         elif local_mode:
             code_bucket, key_prefix = parse_s3_url(self.code_location)
-            code_s3_prefix = "/".join(filter(None, [key_prefix, self._current_job_name, "source"]))
+            code_s3_prefix = "/".join(
+                filter(None, [key_prefix, self._current_job_name, "source"])
+            )
             kms_key = None
         else:
             code_bucket, key_prefix = parse_s3_url(self.code_location)
-            code_s3_prefix = "/".join(filter(None, [key_prefix, self._current_job_name, "source"]))
+            code_s3_prefix = "/".join(
+                filter(None, [key_prefix, self._current_job_name, "source"])
+            )
 
             output_bucket, _ = parse_s3_url(self.output_path)
             kms_key = self.output_kms_key if code_bucket == output_bucket else None
@@ -2312,7 +2401,9 @@ class Framework(EstimatorBase):
                 used for code by the model to be deployed
         """
         return (
-            self.source_dir if self.sagemaker_session.local_mode else self.uploaded_code.s3_prefix
+            self.source_dir
+            if self.sagemaker_session.local_mode
+            else self.uploaded_code.s3_prefix
         )
 
     def _model_entry_point(self):
@@ -2339,7 +2430,9 @@ class Framework(EstimatorBase):
         return self._json_encode_hyperparameters(self._hyperparameters)
 
     @classmethod
-    def _prepare_init_params_from_job_description(cls, job_details, model_channel_name=None):
+    def _prepare_init_params_from_job_description(
+        cls, job_details, model_channel_name=None
+    ):
         """Convert the job description to init params that can be handled by the class constructor.
 
         Args:
@@ -2358,7 +2451,9 @@ class Framework(EstimatorBase):
         init_params["entry_point"] = json.loads(
             init_params["hyperparameters"].get(SCRIPT_PARAM_NAME)
         )
-        init_params["source_dir"] = json.loads(init_params["hyperparameters"].get(DIR_PARAM_NAME))
+        init_params["source_dir"] = json.loads(
+            init_params["hyperparameters"].get(DIR_PARAM_NAME)
+        )
         init_params["container_log_level"] = json.loads(
             init_params["hyperparameters"].get(CONTAINER_LOG_LEVEL_PARAM_NAME)
         )
@@ -2422,7 +2517,9 @@ class Framework(EstimatorBase):
         )
 
     @classmethod
-    def attach(cls, training_job_name, sagemaker_session=None, model_channel_name="model"):
+    def attach(
+        cls, training_job_name, sagemaker_session=None, model_channel_name="model"
+    ):
         """Attach to an existing training job.
 
         Create an Estimator bound to an existing training job, each subclass
@@ -2477,7 +2574,11 @@ class Framework(EstimatorBase):
         current_hyperparameters = hyperparameters
         if current_hyperparameters is not None:
             hyperparameters = {
-                str(k): (v if isinstance(v, (Parameter, Expression, Properties)) else json.dumps(v))
+                str(k): (
+                    v
+                    if isinstance(v, (Parameter, Expression, Properties))
+                    else json.dumps(v)
+                )
                 for (k, v) in current_hyperparameters.items()
             }
         return hyperparameters
@@ -2664,7 +2765,9 @@ class Framework(EstimatorBase):
         if "smdistributed" in distribution:
             # smdistributed strategy selected
             smdistributed = distribution["smdistributed"]
-            smdataparallel_enabled = smdistributed.get("dataparallel", {}).get("enabled", False)
+            smdataparallel_enabled = smdistributed.get("dataparallel", {}).get(
+                "enabled", False
+            )
             distribution_config[self.LAUNCH_SM_DDP_ENV_NAME] = smdataparallel_enabled
             distribution_config[self.INSTANCE_TYPE] = self.instance_type
             if smdataparallel_enabled:
